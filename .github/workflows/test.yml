@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+    branches:
+      - main
+      - 'release**'
+  pull_request:
+    branches:
+      - main
+      - 'release**'
+    paths-ignore:
+      - 'docs/**'
+    types: [opened, synchronize]
+
+  # Allows workflows to be manually triggered
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # This is used in addition to pre-commit.ci so that we can fail the build
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: Changed-files
+        uses: tj-actions/changed-files@v42.0.2
+      - name: List changed files
+        run: echo '${{ steps.changed-files.outputs.all_changed_files }}'
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+      - name: Check for missing init files
+        run: build_tools/fail_on_missing_init_files.sh
+        shell: bash
+
+  run-tests:
+    needs: code-quality
+    name: Test ${{ matrix.os }}-${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+        fail-fast: true
+        matrix:
+          os: [ubuntu-latest, windows-latest, macOS-latest]
+          python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -VV
+          python -m pip install --upgrade pip
+          python -m pip install .[test]
+
+      - name: Generate Pytest coverage report
+        run: |
+          python -m pytest
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
