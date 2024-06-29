@@ -37,7 +37,7 @@ jobs:
         run: echo '${{ steps.changed-files.outputs.all_changed_files }}'
       - uses: pre-commit/action@v3.0.1
         with:
-          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }} SKIP=no-commit-to-branch
       - name: Check for missing init files
         run: build_tools/fail_on_missing_init_files.sh
         shell: bash
