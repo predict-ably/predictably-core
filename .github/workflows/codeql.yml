@@ -2,9 +2,18 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "main" ]
+    paths-ignore:
+      - 'docs/**'
+    branches:
+      - main
+      - 'release**'
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - 'release**'
+    paths-ignore:
+      - 'docs/**'
+    types: [opened, synchronize]
   schedule:
     - cron: "0 0 * * *" # every day at midnight
 
