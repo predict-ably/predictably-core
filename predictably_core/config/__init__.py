@@ -1,6 +1,6 @@
 #!/usr/bin/env python3 -u
 # copyright: predict-ably, BSD-3-Clause License (see LICENSE file)
-""":mod:`predictably_core.config` includes functionality to configure `predictably_core`.
+""":mod:`predictably_core.config` includes configuration of `predictably_core`.
 
 Use these tools to update the behavior of predictably-core and packages that are
 built using it.
@@ -17,8 +17,8 @@ from predictably_core.config._config import (
 
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = [
-    "get_config",
-    "set_config",
-    "reset_config",
     "config_context",
+    "get_config",
+    "reset_config",
+    "set_config",
 ]

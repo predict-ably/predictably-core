@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import collections
 import inspect
-from typing import Any, Optional, Sequence, TypeVar, Union
+from typing import Any, Sequence, TypeVar
 
 from predictably_core.utils._utils import remove_type_text
 
@@ -24,7 +24,7 @@ __all__: list[str] = [
 T = TypeVar("T")
 
 
-def single_element_sequence_to_scalar(x: Sequence[T]) -> Union[T, Sequence[T]]:
+def single_element_sequence_to_scalar(x: Sequence[T]) -> T | Sequence[T]:
     """Remove tuple wrapping from singleton.
 
     If the input has length 1, then the single value is extracted from the input.
@@ -55,7 +55,7 @@ def single_element_sequence_to_scalar(x: Sequence[T]) -> Union[T, Sequence[T]]:
 
 
 def scalar_to_sequence(
-    scalar: Union[T, Sequence[T], None], sequence_type: type = tuple
+    scalar: T | Sequence[T] | None, sequence_type: type = tuple
 ) -> Sequence[T]:
     """Convert a scalar input to a sequence.
 
@@ -127,9 +127,9 @@ def scalar_to_sequence(
 
 
 def format_sequence_to_str(
-    seq: Union[Any, Sequence[Any]],
+    seq: Any | Sequence[Any],
     sep: str = ", ",
-    last_sep: Optional[str] = None,
+    last_sep: str | None = None,
     exclude_type_text: bool = False,
 ) -> str:
     """Format a sequence to a string of delimited elements.
@@ -206,9 +206,9 @@ def format_sequence_to_str(
 
 
 def _convert_scalar_seq_type_input_to_tuple(
-    type_input: Union[type, Sequence[type]],
-    none_default: Optional[type] = None,
-    type_input_subclass: Optional[type] = None,
+    type_input: type | Sequence[type],
+    none_default: type | None = None,
+    type_input_subclass: type | None = None,
     type_input_error_name: str = "type_input",
 ) -> tuple[type, ...]:
     """Convert input that is scalar or sequence of types to always be a tuple.

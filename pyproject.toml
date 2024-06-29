@@ -195,7 +195,7 @@ exclude = [
     "\\.*tests.*",
     "\\.__init__$",
     "__init__$",
-    ".*tests.*"
+    ".*tests.*",
 ]
 
 [tool.setuptools]

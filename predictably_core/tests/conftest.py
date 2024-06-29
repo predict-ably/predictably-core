@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import attrs
 
 from predictably_core.core._base import BaseEstimator, BaseObject
 
-__all__: list[str] = ["Parent", "Child"]
+__all__: list[str] = ["Child", "Parent"]
 __author__: list[str] = ["RNKuhns"]
 
 PREDICTABLY_BASE_CLASSES = (BaseObject, BaseEstimator)
@@ -24,7 +24,7 @@ class Parent(BaseObject):
 
     a: str = "something"
     b: int = 7
-    c: Optional[int] = None
+    c: int | None = None
 
     def some_method(self):
         """To be implemented by child class."""
@@ -54,9 +54,7 @@ class CompositionDummy(BaseObject):
 
     foo: Any = 11
     bar: Any = 84
-    foo_: Optional[int] = attrs.field(
-        alias="foo_", init=False, default=None, repr=False
-    )
+    foo_: int | None = attrs.field(alias="foo_", init=False, default=None, repr=False)
 
     def __attrs_post_init__(self):
         """Execute code after init."""

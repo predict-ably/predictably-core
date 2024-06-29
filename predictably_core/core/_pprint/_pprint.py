@@ -51,11 +51,10 @@ def _changed_params(base_object):
         if isinstance(v, BaseObject) and v.__class__ != init_params[k].__class__:
             return True
         # Use repr as a last resort. It may be expensive.
-        if repr(v) != repr(init_params[k]) and not (
-            _is_scalar_nan(init_params[k]) and _is_scalar_nan(v)
-        ):
-            return True
-        return False
+        return bool(
+            repr(v) != repr(init_params[k])
+            and not (_is_scalar_nan(init_params[k]) and _is_scalar_nan(v))
+        )
 
     return {k: v for k, v in params.items() if has_changed(k, v)}
 
@@ -134,7 +133,7 @@ class _BaseObjectPrettyPrinter(pprint.PrettyPrinter):
         # (they are treated as dicts)
         self.n_max_elements_to_show = n_max_elements_to_show
 
-    def format(self, obj, context, maxlevels, level):  # noqa: A003
+    def format(self, obj, context, maxlevels, level):  # noqa: RUF100, A003
         return _safe_repr(
             obj, context, maxlevels, level, changed_only=self.changed_only
         )
@@ -323,7 +322,7 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
         if objid in context:
             return pprint._recursion(obj), False, True
         context[objid] = 1
-        readable = True
+        rdable = True
         recursive = False
         components = []
         append = components.append
@@ -338,11 +337,11 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
                 v, context, maxlevels, level, changed_only=changed_only
             )
             append(f"{krepr}: {vrepr}")
-            readable = readable and kreadable and vreadable
+            rdable = rdable and kreadable and vreadable
             if krecur or vrecur:
                 recursive = True
         del context[objid]
-        return "{%s}" % ", ".join(components), readable, recursive
+        return "{%s}" % ", ".join(components), rdable, recursive  # noqa: RUF100, UP031
 
     if (issubclass(typ, list) and r is list.__repr__) or (
         issubclass(typ, tuple) and r is tuple.__repr__
@@ -363,7 +362,7 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
         if objid in context:
             return pprint._recursion(obj), False, True
         context[objid] = 1
-        readable = True
+        rdable = True
         recursive = False
         components = []
         append = components.append
@@ -374,11 +373,11 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
             )
             append(orepr)
             if not oreadable:
-                readable = False
+                rdable = False
             if orecur:
                 recursive = True
         del context[objid]
-        return format_ % ", ".join(components), readable, recursive
+        return format_ % ", ".join(components), rdable, recursive  # noqa: RUF100, UP031
 
     if issubclass(typ, BaseObject):
         objid = id(obj)
@@ -389,10 +388,7 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
         context[objid] = 1
         readable = True
         recursive = False
-        if changed_only:
-            params = _changed_params(obj)
-        else:
-            params = obj.get_params(deep=False)
+        params = _changed_params(obj) if changed_only else obj.get_params(deep=False)
         components = []
         append = components.append
         level += 1

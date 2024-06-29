@@ -342,7 +342,11 @@ _STYLE = """
 #$id div.sk-text-repr-fallback {
   display: none;
 }
-""".replace("  ", "").replace("\n", "")
+""".replace(
+    "  ", ""
+).replace(
+    "\n", ""
+)
 
 
 def _object_html_repr(base_object: prc._base.BaseOBject) -> str:

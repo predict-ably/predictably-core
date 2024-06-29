@@ -15,15 +15,7 @@ import inspect
 import re
 import sys
 from copy import deepcopy
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Iterable,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Callable, ClassVar, Iterable, Sequence
 
 if sys.version_info < (3, 11):
     from typing_extensions import Self
@@ -446,7 +438,7 @@ class BaseObject:
     def _clone_flags(
         self,
         obj: BaseObject,
-        flag_names: Optional[Union[str, Sequence[str]]] = None,
+        flag_names: str | Sequence[str] | None = None,
         flag_attr_name: str = "_tags",
     ) -> Self:
         """Update object with flags from another object.
@@ -591,7 +583,7 @@ class BaseObject:
         )
 
     def _clone_tags(
-        self, obj: BaseObject, tag_names: Optional[Union[str, Sequence[str]]] = None
+        self, obj: BaseObject, tag_names: str | Sequence[str] | None = None
     ) -> Self:
         """Update the tags of this object by cloning the tags from another object.
 
@@ -620,7 +612,7 @@ class BaseObject:
         return self._clone_flags(obj=obj, flag_names=tag_names, flag_attr_name="_tags")
 
     def _get_config(
-        self, config_param: Optional[Union[str, Sequence[str]]] = None
+        self, config_param: str | Sequence[str] | None = None
     ) -> dict[str, Any]:
         """Get configuration parameters impacting the object.
 
@@ -776,7 +768,7 @@ class BaseObject:
 
         return composite
 
-    def _components(self, base_class: Optional[type] = None) -> dict[str, Any]:
+    def _components(self, base_class: type | None = None) -> dict[str, Any]:
         """Return references to all state changing BaseObject type attributes.
 
         This *excludes* the blue-print-like components passed in the __init__.

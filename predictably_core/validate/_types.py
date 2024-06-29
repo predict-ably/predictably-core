@@ -16,7 +16,7 @@ import inspect
 import math
 import numbers
 import pathlib
-from typing import TYPE_CHECKING, Any, Optional, Sequence, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Sequence, TypeVar, overload
 
 from predictably_core.utils._iter import (
     _convert_scalar_seq_type_input_to_tuple,
@@ -90,21 +90,24 @@ def is_iterable(input_: T) -> bool:
 @overload
 def check_path(
     path_: str, path_error_name: str = "path_"
-) -> pathlib.Path:  # numpydoc: ignore=GL08
+) -> pathlib.Path:  # numpydoc ignore=GL08
     ...  # pragma: no cover
 
 
 @overload
 def check_path(
     path_: pathlib.Path, path_error_name: str = "path_"
-) -> pathlib.Path:  # numpydoc: ignore=GL08
+) -> pathlib.Path:  # numpydoc ignore=GL08
     ...  # pragma: no cover
 
 
 def check_path(
-    path_: Union[str, pathlib.Path], path_error_name: str = "path_"
+    path_: str | pathlib.Path, path_error_name: str = "path_"
 ) -> pathlib.Path:
     """Validate `path` is `pathlib.Path` or `str`.
+
+    Input is considered a valid path if it is a pathlib.Path or string that is
+    convertible to a pathlib.Path.
 
     Parameters
     ----------
@@ -153,7 +156,7 @@ def check_path(
 
 def check_type(
     input_: T,
-    expected_type: Union[type, tuple[type, ...]],
+    expected_type: type | tuple[type, ...],
     allow_none: bool = False,
     use_subclass: bool = False,
     input_error_name: str = "input_",
@@ -251,8 +254,8 @@ def check_type(
 
 def is_sequence(
     input_seq: Any,
-    sequence_type: Optional[Union[type, tuple[type, ...]]] = None,
-    element_type: Optional[Union[type, tuple[type, ...]]] = None,
+    sequence_type: type | tuple[type, ...] | None = None,
+    element_type: type | tuple[type, ...] | None = None,
 ) -> bool:
     """Indicate if an object is a sequence with optional check of element types.
 
@@ -336,11 +339,11 @@ def is_sequence(
 
 def check_sequence(
     input_seq: Sequence[Any],
-    sequence_type: Optional[Union[type, tuple[type, ...]]] = None,
-    element_type: Optional[Union[type, tuple[type, ...]]] = None,
-    coerce_output_type_to: Optional[type] = None,
+    sequence_type: type | tuple[type, ...] | None = None,
+    element_type: type | tuple[type, ...] | None = None,
+    coerce_output_type_to: type | None = None,
     coerce_scalar_input: bool = False,
-    sequence_name: Optional[str] = None,
+    sequence_name: str | None = None,
 ) -> Sequence[Any]:
     """Check whether an object is a sequence with optional check of element types.
 
@@ -453,7 +456,7 @@ def check_sequence(
     if coerce_output_type_to is not None:
         output_ = coerce_output_type_to(input_seq)
         if TYPE_CHECKING:  # pragma: no cover
-            assert isinstance(output_, collections.abc.Sequence)  # nosec B101
+            assert isinstance(output_, collections.abc.Sequence)  # noqa: RUF100, S101
         return output_
 
     return input_seq

@@ -1,16 +1,19 @@
-"""Utility functions for use through `predictably`-style packages."""  # numpydoc ignore=ES01
+"""Utility functions for use through `predictably`-style packages.
+
+For utility functions related to iterables see :mod:`predictable_core.utils._iter`.
+"""
 
 from __future__ import annotations
 
 import collections
 import re
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping
 
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = ["compare_mappings", "remove_type_text", "update_dict_at"]
 
 
-def remove_type_text(input_: Union[str, type]) -> str:
+def remove_type_text(input_: str | type) -> str:
     """Remove <class >  or ForwardRf() wrapper from printed type str.
 
     If the input doesn't have the wrapper <class > or ForwardRef() text it
@@ -62,14 +65,14 @@ def compare_mappings(
 ) -> bool:
     """Compare if two mappings are equal.
 
-    Equality is interpretted as having the same keys, and optionally having the
+    Equality is interpreted as having the same keys, and optionally having the
     same values and ordering.
 
     Parameters
     ----------
     map_ : Mapping[Any, Any]
         The mapping to compare to.
-    other_map: Mapping[Any, Any]
+    other_map : Mapping[Any, Any]
         The mapping to compare to `map_`.
     values : bool, default=True
         Whether to require the mappings to have the same values.
@@ -156,7 +159,7 @@ def compare_mappings(
 def update_dict_at(
     input_dict: dict[Any, Any],
     new_dict: dict[Any, Any],
-    at: Optional[int] = None,
+    at: int | None = None,
     keep_new: bool = True,
 ) -> dict[Any, Any]:
     """Update a dictionary with a new dictionary at a given 'position'.

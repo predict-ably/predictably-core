@@ -68,10 +68,7 @@ def test_global_config_param_is_valid_param_value(value):
         allowed_values=("text", "diagram"),
     )
     # Verify we correctly identify invalid parameters
-    if value in ("text", "diagram"):
-        expected_valid = True
-    else:
-        expected_valid = False
+    expected_valid = value in ("text", "diagram")
     assert some_config_param.is_valid_param_value(value) == expected_valid
 
 
@@ -294,7 +291,6 @@ def test_config_threadsafe():
     between threads. Same test as `test_config_threadsafe_joblib` but with
     `ThreadPoolExecutor`.
     """
-
     print_changed_only_vals = [False, True, False, True]
     sleep_durations = [0.1, 0.2, 0.1, 0.2]
 
