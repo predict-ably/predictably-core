@@ -33,7 +33,7 @@ classifiers = [
 ]
 requires-python = ">=3.8,<3.13"
 dependencies = [
-    "attrs>=0.22.2"
+    "attrs>=0.22.2", "typing-extensions"
 ]
 
 [project.optional-dependencies]
