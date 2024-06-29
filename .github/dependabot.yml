@@ -16,7 +16,7 @@ updates:
       prefix: "[Dependabot]: github-actions"
       include: "scope"
   # Maintain dependencies for pip packages
-  - package-ecosystem: "conda"
+  - package-ecosystem: "pip"
     directory: "/pyproject.toml"
     schedule:
       interval: "daily"
