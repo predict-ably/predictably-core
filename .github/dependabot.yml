@@ -22,12 +22,12 @@ updates:
   - package-ecosystem: "pip"
     directory: "/pyproject.toml"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     # Include a list of updated dependencies
     # with a prefix determined by the dependency group
     commit-message:
-      prefix: "[Dependabot]: pip prod"
-      prefix-development: "[Dependabot]: pip dev"
+      prefix: "[Dependabot]: conda prod"
+      prefix-development: "[Dependabot]: conda dev"
       include: "scope"
     labels:
      - "maintenance"
