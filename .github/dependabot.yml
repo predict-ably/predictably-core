@@ -18,6 +18,7 @@ updates:
     labels:
        - "maintenance"
        - "dependencies"
+       - "no changelog"
   # Maintain dependencies for pip packages
   - package-ecosystem: "pip"
     directory: "/pyproject.toml"
@@ -32,3 +33,4 @@ updates:
     labels:
      - "maintenance"
      - "dependencies"
+     - "no changelog"
