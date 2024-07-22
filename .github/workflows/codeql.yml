@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - language: [python]
+        - language: python
           build-mode: none
     steps:
     - name: Checkout repository
