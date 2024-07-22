@@ -14,6 +14,27 @@ __all__: list[str] = [
 __author__: list[str] = ["RNKuhns"]
 
 
+class BaseObject:
+    """Base class for mock objects used in testing."""
+
+    def get_params(self, deep=True):
+        """Mock method to get parameters. Should be overridden by subclasses."""
+        return {}
+
+
+class MockObject(BaseObject):
+    """Mock object for testing with default and non-default parameters."""
+
+    def __init__(self, param1=1, param2=2, param3=None):
+        self.param1 = param1
+        self.param2 = param2
+        self.param3 = param3
+
+    def get_params(self, deep=False):
+        """Override method to return the object's parameters."""
+        return {"param1": self.param1, "param2": self.param2, "param3": self.param3}
+
+
 class MockBaseObjectWithVisualBlock:
     """Mock class implementing visual block.
 
