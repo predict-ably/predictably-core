@@ -82,6 +82,33 @@ def test_changed_params_no_default():
     assert result == expected
 
 
+def test_changed_params_use_of_kwargs():
+    """
+    Test _changed_params with a parameter that is passed as a kwarg.
+
+    This test verifies that the function correctly identifies and returns
+    parameters with kwargs as changed.
+
+    Asserts:
+        The function returns a dictionary with the parameter that is passed as
+        kwarg.
+    """
+
+    class NoDefaultParamObject(BaseObject):
+        def __init__(self, param1, **kwargs):
+            self.param1 = param1
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+        def get_params(self, deep=False):
+            return {"param1": self.param1, "kwarg1": self.kwarg1}
+
+    obj = NoDefaultParamObject(param1=10, kwarg1=11)
+    result = _changed_params(obj)
+    expected = {"param1": 10, "kwarg1": 11}
+    assert result == expected
+
+
 def test_changed_params_nan_values():
     """
     Test _changed_params with parameters having NaN values.
