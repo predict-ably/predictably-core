@@ -6,27 +6,14 @@ from predictably_core.core._pprint._object_html_repr import (
     _get_visual_block,
     _VisualBlock,
 )
+from predictably_core.core._pprint.tests.conftest import (
+    MockBaseObjectWithNestedParams,
+    MockBaseObjectWithoutParams,
+    MockBaseObjectWithParams,
+    MockBaseObjectWithVisualBlock,
+)
 
 __author__: list[str] = ["RNKuhns"]
-
-
-class MockBaseObjectWithVisualBlock:
-    def _sk_visual_block_(self):
-        return "mock_visual_block"
-
-
-class MockBaseObjectWithParams:
-    def get_params(self):
-        return {"param1": "value1", "param2": "value2"}
-
-
-class MockBaseObjectWithNestedParams:
-    def get_params(self):
-        return {"param1": MockBaseObjectWithParams(), "param2": "value2"}
-
-
-class MockBaseObjectWithoutParams:
-    pass
 
 
 def test_get_visual_block_with_visual_block():
