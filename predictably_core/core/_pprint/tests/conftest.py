@@ -5,6 +5,8 @@ This includes configurations used in multiple test files.
 
 from __future__ import annotations
 
+from predictably_core.core._base import BaseObject
+
 __all__: list[str] = [
     "MockBaseObjectWithNestedParams",
     "MockBaseObjectWithParams",
@@ -12,14 +14,6 @@ __all__: list[str] = [
     "MockBaseObjectWithoutParams",
 ]
 __author__: list[str] = ["RNKuhns"]
-
-
-class BaseObject:
-    """Base class for mock objects used in testing."""
-
-    def get_params(self, deep=True):
-        """Mock method to get parameters. Should be overridden by subclasses."""
-        return {}
 
 
 class MockObject(BaseObject):
@@ -33,6 +27,40 @@ class MockObject(BaseObject):
     def get_params(self, deep=False):
         """Override method to return the object's parameters."""
         return {"param1": self.param1, "param2": self.param2, "param3": self.param3}
+
+
+class MockObjectManyParams(BaseObject):
+    """Mock object for testing with default and non-default parameters."""
+
+    def __init__(
+        self,
+        param1=1,
+        param2=2,
+        param3=3,
+        param4=4,
+        param5=5,
+        param6=6,
+        param7=7,
+    ):
+        self.param1 = param1
+        self.param2 = param2
+        self.param3 = param3
+        self.param4 = param4
+        self.param5 = param5
+        self.param6 = param6
+        self.param7 = param7
+
+    def get_params(self, deep=False):
+        """Override method to return the object's parameters."""
+        return {
+            "param1": self.param1,
+            "param2": self.param2,
+            "param3": self.param3,
+            "param4": self.param4,
+            "param5": self.param5,
+            "param6": self.param6,
+            "param7": self.param7,
+        }
 
 
 class MockBaseObjectWithVisualBlock:
