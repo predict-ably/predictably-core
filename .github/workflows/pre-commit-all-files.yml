@@ -1,0 +1,41 @@
+name: Run pre-commit on all files
+
+on:
+  push:
+    branches:
+      - main
+      - 'release**'
+  pull_request_target:
+    branches:
+      - main
+      - 'release**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit-all-files:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Get changed files
+        uses: tj-actions/changed-files@v44.5.5
+        id: changed-files
+
+      - name: List changed files
+        run: echo '${{ steps.changed-files.outputs.all_changed_files }}'
+
+      - if: ${{ github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'pre-commit all files') }}
+        name: Run pre-commit on all files
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files

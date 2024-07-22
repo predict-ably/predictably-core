@@ -15,6 +15,10 @@ updates:
     commit-message:
       prefix: "[Dependabot]: github-actions"
       include: "scope"
+    labels:
+       - "maintenance"
+       - "dependencies"
+       - "no changelog"
   # Maintain dependencies for pip packages
   - package-ecosystem: "pip"
     directory: "/pyproject.toml"
@@ -26,3 +30,7 @@ updates:
       prefix: "[Dependabot]: conda prod"
       prefix-development: "[Dependabot]: conda dev"
       include: "scope"
+    labels:
+     - "maintenance"
+     - "dependencies"
+     - "no changelog"

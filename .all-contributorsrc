@@ -1,0 +1,38 @@
+{
+  "projectName": "predictably-core",
+  "projectOwner": "predict-ably",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "CONTRIBUTORS.md"
+  ],
+  "imageSize": 80,
+  "commit": "false",
+  "commitConvention": "atom",
+  "contributorsPerLine": 8,
+  "contributorsSortAlphabetically": true,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg)](#contributors)",
+  "linkToUsage": true,
+  "skipCi": true,
+  "contributors": [
+    {
+      "login": "rnkuhns",
+      "name": "Ryan Kuhns",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26907244?v=4",
+      "profile": "https://github.com/rnkuhns",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "design",
+        "ideas",
+        "maintenance",
+        "mentoring",
+        "projectManagement",
+        "question",
+        "review",
+        "test"
+      ]
+    }
+  ]
+}
