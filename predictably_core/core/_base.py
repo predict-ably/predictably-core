@@ -24,6 +24,7 @@ else:
 
 from predictably_core.config import get_config
 from predictably_core.config._config import _CONFIG_REGISTRY
+from predictably_core.core._clone import _clone_parametrized
 from predictably_core.core._exceptions import NotFittedError
 from predictably_core.core._pprint._object_html_repr import _object_html_repr
 from predictably_core.utils._iter import format_sequence_to_str
@@ -273,8 +274,6 @@ class BaseObject:
         BaseObject
             A clone of the BaseObject.
         """
-        from predictably_core.core._clone import _clone_parametrized
-
         return _clone_parametrized(self)
 
     def __predictably_clone__(self) -> BaseObject:
@@ -287,8 +286,6 @@ class BaseObject:
         BaseObject
             A clone of the BaseObject.
         """
-        from predictably_core.core._clone import _clone_parametrized
-
         return _clone_parametrized(self)
 
     @classmethod
