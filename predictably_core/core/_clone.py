@@ -13,10 +13,9 @@ from __future__ import annotations
 import collections
 import copy
 import inspect
-from typing import TYPE_CHECKING, Sequence, TypeAlias
+from typing import Sequence, TypeAlias
 
-if TYPE_CHECKING:
-    from predictably_core.core._base import BaseObject
+from predictably_core.core._base import BaseObject
 
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = ["_clone_parametrized", "clone"]
