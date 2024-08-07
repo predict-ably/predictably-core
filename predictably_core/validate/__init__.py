@@ -12,18 +12,22 @@ validation of inputs to `predictably` methods and functions.
 from __future__ import annotations
 
 from predictably_core.validate._types import (
+    check_mapping,
     check_path,
     check_sequence,
     check_type,
     is_iterable,
+    is_mapping,
     is_sequence,
 )
 
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = [
+    "check_mapping",
     "check_path",
     "check_sequence",
     "check_type",
     "is_iterable",
+    "is_mapping",
     "is_sequence",
 ]

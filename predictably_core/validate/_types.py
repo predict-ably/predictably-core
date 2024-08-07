@@ -28,14 +28,155 @@ from predictably_core.utils._iter import (
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = [
     "_is_scalar_nan",
+    "check_mapping",
     "check_path",
     "check_sequence",
     "check_type",
     "is_iterable",
+    "is_mapping",
     "is_sequence",
 ]
 
 T = TypeVar("T")
+
+
+def is_mapping(
+    input_: T,
+    mapping_type: type = dict,
+    key_type: type | Sequence[type] | None = None,
+    value_type: type | Sequence[type] | None = None,
+) -> bool:
+    """Indicate if the input is a mapping with expected key and value types.
+
+    Determines if a mapping has the expected types, including the type of mapping,
+    and optionally whether it's keys and values are the expected types.
+
+    Parameters
+    ----------
+    input_ : Any
+        The input to check to see if it is a mapping that optionally has
+        the expected key and value types.
+    mapping_type : type, default=dict
+        The expected type of the mapping.
+    key_type : type or tuple[type], default=None
+        The allowed type(s) for elements of `seq`.
+    value_type : type or tuple[type], default=None
+        The allowed type(s) for elements of `seq`.
+
+    Returns
+    -------
+    bool
+        Whether `input_` is a mapping with expected types.
+
+    Examples
+    --------
+    >>> from predictably_core.validate import is_mapping
+    >>> some_map = {"something": 1, "something_else": 2}
+    >>> is_mapping(some_map)
+    True
+    >>> is_mapping(some_map, key_type=str)
+    True
+    >>> is_mapping(some_map, key_type=int)
+    False
+    >>> is_mapping(some_map, key_type=(int, str))
+    True
+    >>> is_mapping(some_map, key_type=str, value_type=int)
+    True
+    >>> is_mapping(some_map, value_type=float)
+    False
+    """
+    is_valid_mapping: bool = True
+    if not isinstance(input_, mapping_type):
+        is_valid_mapping = False
+
+    # Optionally verify keys and values have correct types
+    if key_type is not None:
+        key_type_ = _convert_scalar_seq_type_input_to_tuple(
+            key_type, type_input_error_name="key_type"
+        )
+        if not all(isinstance(k, key_type_) for k in input_):
+            is_valid_mapping = False
+
+    if value_type is not None:
+        value_type_ = _convert_scalar_seq_type_input_to_tuple(
+            value_type, type_input_error_name="key_type"
+        )
+        if not all(isinstance(v, value_type_) for v in input_.values()):
+            is_valid_mapping = False
+    return is_valid_mapping
+
+
+def check_mapping(
+    input_: T,
+    mapping_type: type = dict,
+    key_type: type | Sequence[type] | None = None,
+    value_type: type | Sequence[type] | None = None,
+    input_error_name: str = "input_",
+) -> T:
+    """Validate if the input is a mapping with expected key and value types.
+
+    Returns the input if the validation passes. Otherwise, an error is raised.
+
+    Parameters
+    ----------
+    input_ : Any
+        The input to check to see if it is a mapping that optionally has
+        the expected key and value types.
+    mapping_type : type, default=dict
+        The expected type of the mapping.
+    key_type : type or tuple[type], default=None
+        The allowed type(s) for elements of `seq`.
+    value_type : type or tuple[type], default=None
+        The allowed type(s) for elements of `seq`.
+    input_error_name : str, default="input_"
+        The name to refer to `input_` as in any raised error messages. This
+        is useful if you are using this to check a variable's type inside other
+        code and want to raise a message with the name of the variable being
+        validated.
+
+    Returns
+    -------
+    Mapping
+        The `input_` mapping unchanged.
+
+    Raises
+    ------
+    ValueError
+        If the the `input_` is not a mapping of the expected type or optionally,
+        if it does not have keys and/or values of the expected types.
+
+    Examples
+    --------
+    >>> from predictably_core.validate import check_mapping
+    >>> some_map = {"something": 1, "something_else": 2}
+    >>> check_mapping(some_map)
+    {'something': 1, 'something_else': 2}
+    >>> check_mapping(some_map, key_type=str)
+    {'something': 1, 'something_else': 2}
+    >>> check_mapping(some_map, key_type=int)  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    ValueError: The mapping `input_` is invalid.
+    ...
+    >>> check_mapping(some_map, key_type=(int, str))
+    {'something': 1, 'something_else': 2}
+    >>> check_mapping(some_map, key_type=str, value_type=int)
+    {'something': 1, 'something_else': 2}
+    >>> check_mapping(some_map, value_type=float)  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    ValueError: The mapping `input_` is invalid.
+    ...
+    """
+    is_valid_mapping = is_mapping(
+        input_=input_,
+        mapping_type=mapping_type,
+        key_type=key_type,
+        value_type=value_type,
+    )
+    if not is_valid_mapping:
+        raise ValueError(f"The mapping `{input_error_name}` is invalid.\n")
+    return input_
 
 
 def is_iterable(input_: T) -> bool:
