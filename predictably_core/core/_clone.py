@@ -13,7 +13,13 @@ from __future__ import annotations
 import collections
 import copy
 import inspect
-from typing import Sequence, TypeAlias
+import sys
+from typing import Sequence
+
+if sys.version_info < (3, 10):
+    from typing_extensions import TypeAlias
+else:
+    from typing import TypeAlias
 
 from predictably_core.core._base import BaseObject
 
