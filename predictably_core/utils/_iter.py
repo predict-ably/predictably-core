@@ -245,6 +245,19 @@ def _convert_scalar_seq_type_input_to_tuple(
         If `type_input` is not a type or sequence of types. If `type_input_subclass`
         is not None then an error is also raised if any of the type(s) is not
         a subclass of the specified type.
+
+    Examples
+    --------
+    >>> from predictably_core.utils import _convert_scalar_seq_type_input_to_tuple
+
+    >>> _convert_scalar_seq_type_input_to_tuple(int)
+    (<class 'int'>,)
+
+    >>> _convert_scalar_seq_type_input_to_tuple([int, float])
+    (<class 'int'>, <class 'float'>)
+
+    >>> _convert_scalar_seq_type_input_to_tuple((int, float))
+    (<class 'int'>, <class 'float'>)
     """
     if none_default is None:
         none_default = collections.abc.Sequence
