@@ -23,6 +23,7 @@ class Parent(BaseObject):
         self.a = a
         self.b = b
         self.c = c
+        super().__init__()
 
     def some_method(self):
         """To be implemented by child class."""
@@ -52,6 +53,7 @@ class CompositionDummy(BaseObject):
         self.foo = foo
         self.bar = bar
         self.foo_ = deepcopy(foo)
+        super().__init__()
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

@@ -90,6 +90,7 @@ class ResetTester(BaseObject):
         self.a = a
         self.b = b
         self.c = c
+        super().__init__()
 
     def foo(self, d=126):
         """Foo gets done."""
@@ -149,6 +150,7 @@ class NonInitParams(BaseObject):
     def __init__(self, field_2: int = 10, field_1: float = 1.5):
         self.field_2 = field_2
         self._field_3 = 20
+        super().__init__()
 
 
 @pytest.fixture
@@ -1171,6 +1173,7 @@ class FittableCompositionDummy(BaseEstimator):
         self.foo = foo
         self.bar = bar
         self.foo_ = deepcopy(self.foo)
+        super().__init__()
 
     def fit(self):
         if hasattr(self.foo_, "fit"):
