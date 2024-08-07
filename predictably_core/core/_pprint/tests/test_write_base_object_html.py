@@ -8,10 +8,6 @@ import pytest
 
 # Import the functions to be tested
 import predictably_core.core._pprint._object_html_repr as ohr
-from predictably_core.core._pprint._object_html_repr import (
-    _VisualBlock,
-    _write_base_object_html,
-)
 from predictably_core.core._pprint.tests.conftest import (
     MockBaseObjectWithNestedParams,
 )
@@ -24,26 +20,28 @@ __author__: list[str] = ["RNKuhns"]
 def mock_get_visual_block(monkeypatch):
     def mock_return(value):
         if isinstance(value, list):
-            return _VisualBlock(
+            return ohr._VisualBlock(
                 "parallel",
                 value,
                 names=["Object1", "Object2"],
                 name_details=["Details1", "Details2"],
             )
         elif isinstance(value, tuple):
-            return _VisualBlock(
+            return ohr._VisualBlock(
                 "serial",
                 value,
                 names=["Object1", "Object2"],
                 name_details=["Details1", "Details2"],
             )
         elif isinstance(value, str):
-            return _VisualBlock("single", value, names=value, name_details=value)
+            return ohr._VisualBlock("single", value, names=value, name_details=value)
         elif value is None:
-            return _VisualBlock("single", None, names="None", name_details="None")
+            return ohr._VisualBlock("single", None, names="None", name_details="None")
         elif isinstance(value, MockBaseObjectWithNestedParams):
-            return _VisualBlock("parallel", [value.get_params()["param1"]], names=None)
-        return _VisualBlock(
+            return ohr._VisualBlock(
+                "parallel", [value.get_params()["param1"]], names=None
+            )
+        return ohr._VisualBlock(
             "single", value, names=value.__class__.__name__, name_details=str(value)
         )
 
@@ -62,7 +60,7 @@ def test_write_base_object_html_single(mock_get_visual_block):
     """
     out = io.StringIO()
     base_object = "test_object"
-    _write_base_object_html(
+    ohr._write_base_object_html(
         out, base_object, "Label", "Label Details", first_call=False
     )
     result = out.getvalue()
@@ -82,7 +80,9 @@ def test_write_base_object_html_parallel(mock_get_visual_block):
     """
     out = io.StringIO()
     base_object = ["Object1", "Object2"]
-    _write_base_object_html(out, base_object, "Label", "Label Details", first_call=True)
+    ohr._write_base_object_html(
+        out, base_object, "Label", "Label Details", first_call=True
+    )
     result = out.getvalue()
     assert 'class="sk-parallel"' in result
     assert 'class="sk-parallel-item"' in result
@@ -99,7 +99,7 @@ def test_write_base_object_html_2(mock_get_visual_block):
         The correct HTML is written for nested base objects.
     """
     out = io.StringIO()
-    _write_base_object_html(out, MockBaseObjectWithNestedParams(), "Label", "Label")
+    ohr._write_base_object_html(out, MockBaseObjectWithNestedParams(), "Label", "Label")
     result = out.getvalue()
     assert 'class="sk-parallel"' in result
     assert 'class="sk-parallel-item"' in result
@@ -117,7 +117,9 @@ def test_write_base_object_html_serial(mock_get_visual_block):
     """
     out = io.StringIO()
     base_object = ("Object1", "Object2")
-    _write_base_object_html(out, base_object, "Label", "Label Details", first_call=True)
+    ohr._write_base_object_html(
+        out, base_object, "Label", "Label Details", first_call=True
+    )
     result = out.getvalue()
     assert 'class="sk-serial"' in result
 
@@ -134,7 +136,9 @@ def test_write_base_object_html_none(mock_get_visual_block):
     """
     out = io.StringIO()
     base_object = None
-    _write_base_object_html(out, base_object, "Label", "Label Details", first_call=True)
+    ohr._write_base_object_html(
+        out, base_object, "Label", "Label Details", first_call=True
+    )
     result = out.getvalue()
     assert "class='sk-item'" in result
 
@@ -151,7 +155,9 @@ def test_write_base_object_html_first_call(mock_get_visual_block):
     """
     out = io.StringIO()
     base_object = "test_object"
-    _write_base_object_html(out, base_object, "Label", "Label Details", first_call=True)
+    ohr._write_base_object_html(
+        out, base_object, "Label", "Label Details", first_call=True
+    )
     result = out.getvalue()
     assert 'type="checkbox" checked' in result, result
     assert "class='sk-item'" in result, result
