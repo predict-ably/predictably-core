@@ -27,7 +27,6 @@ import inspect
 from copy import deepcopy
 from typing import Any, ClassVar
 
-import attrs
 import numpy as np
 import pytest
 import scipy.sparse as sp
@@ -82,14 +81,15 @@ __all__: list[str] = [
 ]
 
 
-@attrs.define(slots=False)
 class ResetTester(BaseObject):
     """Class for testing reset functionality."""
 
     clsvar: ClassVar[int] = 210
-    a: int
-    b: int = 42
-    c: int = 84
+
+    def __init__(self, a: int, b: int = 42, c: int = 84):
+        self.a = a
+        self.b = b
+        self.c = c
 
     def foo(self, d=126):
         """Foo gets done."""
@@ -143,12 +143,12 @@ class ModifyParam(BaseObject):
         super().__init__()
 
 
-@attrs.define(slots=False)
 class NonInitParams(BaseObject):
-    """A class with non-init params defined using attrs."""
+    """A class with non-init params."""
 
-    field_2: int = attrs.field(default=10)
-    field_1: int = attrs.field(default=20, init=False, repr=False)
+    def __init__(self, field_2: int = 10, field_1: float = 1.5):
+        self.field_2 = field_2
+        self._field_3 = 20
 
 
 @pytest.fixture
@@ -642,40 +642,19 @@ def test_get_param_names(
     assert param_names == []
 
     param_names = fixture_class_instance_no_init_params._get_param_names()
-    assert param_names == ["field_2"]
-    param_names = fixture_class_instance_no_init_params._get_param_names(
-        init_only=False
-    )
-    assert param_names == ["_config_dynamic", "_tags_dynamic", "field_1", "field_2"]
-    param_names = fixture_class_instance_no_init_params._get_param_names(
-        init_only=False, sort=False
-    )
-    assert param_names == ["_tags_dynamic", "_config_dynamic", "field_2", "field_1"]
+    assert param_names == ["field_1", "field_2"]
+    param_names = fixture_class_instance_no_init_params._get_param_names(sort=False)
+    assert param_names == ["field_2", "field_1"]
 
 
 def test_get_param_defaults(fixture_class_instance_no_init_params):
     """Test _get_param_defaults method returns expected."""
-    defaults = fixture_class_instance_no_init_params._get_param_defaults(init_only=True)
-    assert defaults == {"field_2": 10}
-    defaults = fixture_class_instance_no_init_params._get_param_defaults(
-        init_only=False
-    )
+    defaults = fixture_class_instance_no_init_params._get_param_defaults(sort=True)
+    assert defaults == {"field_1": 1.5, "field_2": 10}
+    defaults = fixture_class_instance_no_init_params._get_param_defaults(sort=False)
     expected_defaults = {
-        "_config_dynamic": {},
-        "_tags_dynamic": {},
-        "field_1": 20,
         "field_2": 10,
-    }
-    assert defaults == expected_defaults
-
-    defaults = fixture_class_instance_no_init_params._get_param_defaults(
-        init_only=False
-    )
-    expected_defaults = {
-        "_tags_dynamic": {},
-        "_config_dynamic": {},
-        "field_2": 10,
-        "field_1": 20,
+        "field_1": 1.5,
     }
     assert defaults == expected_defaults
 
@@ -1185,15 +1164,12 @@ def test_repr_html_wraps(fixture_class_parent_instance: Parent):
         fixture_class_parent_instance._repr_html_()
 
 
-@attrs.define(kw_only=True, slots=False)
 class FittableCompositionDummy(BaseEstimator):
     """Potentially composite object, for testing."""
 
-    foo: Any
-    bar: int | None = attrs.field(default=None)
-    foo_: int | None = attrs.field(alias="foo_", init=False, default=None)
-
-    def __attrs_post_init__(self):
+    def __init__(self, foo: Any, bar: int | None = None):
+        self.foo = foo
+        self.bar = bar
         self.foo_ = deepcopy(self.foo)
 
     def fit(self):

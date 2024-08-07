@@ -5,8 +5,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, ClassVar
 
-import attrs
-
 from predictably_core.core._base import BaseEstimator, BaseObject
 
 __all__: list[str] = ["Child", "Parent"]
@@ -16,15 +14,15 @@ PREDICTABLY_BASE_CLASSES = (BaseObject, BaseEstimator)
 
 
 # Fixture class for testing tag system
-@attrs.define(kw_only=True, slots=False, repr=False)
 class Parent(BaseObject):
     """Parent class to test BaseObject's usage."""
 
     _tags: ClassVar[dict[str, Any]] = {"A": "1", "B": 2, "C": 1234, "3": "D"}
 
-    a: str = "something"
-    b: int = 7
-    c: int | None = None
+    def __init__(self, a: str = "something", b: int = 7, c: int | None = None) -> None:
+        self.a = a
+        self.b = b
+        self.c = c
 
     def some_method(self):
         """To be implemented by child class."""
@@ -32,7 +30,6 @@ class Parent(BaseObject):
 
 
 # Fixture class for testing tag system, child overrides tags
-@attrs.define(kw_only=True, slots=False, repr=False)
 class Child(Parent):
     """Child class that is child of FixtureClassParent."""
 
@@ -48,17 +45,13 @@ class Child(Parent):
         pass
 
 
-@attrs.define(kw_only=True, slots=False, repr=False)
 class CompositionDummy(BaseObject):
     """Potentially composite object, for testing."""
 
-    foo: Any = 11
-    bar: Any = 84
-    foo_: int | None = attrs.field(alias="foo_", init=False, default=None, repr=False)
-
-    def __attrs_post_init__(self):
-        """Execute code after init."""
-        self.foo_ = deepcopy(self.foo)
+    def __init__(self, foo: Any = 11, bar: Any = 84) -> None:
+        self.foo = foo
+        self.bar = bar
+        self.foo_ = deepcopy(foo)
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
