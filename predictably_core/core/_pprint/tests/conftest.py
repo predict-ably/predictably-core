@@ -23,6 +23,7 @@ class MockObject(BaseObject):
         self.param1 = param1
         self.param2 = param2
         self.param3 = param3
+        super().__init__()
 
     def get_params(self, deep=False):
         """Override method to return the object's parameters."""
@@ -49,6 +50,7 @@ class MockObjectManyParams(BaseObject):
         self.param5 = param5
         self.param6 = param6
         self.param7 = param7
+        super().__init__()
 
     def get_params(self, deep=False):
         """Override method to return the object's parameters."""
