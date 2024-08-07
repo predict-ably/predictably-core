@@ -1,20 +1,20 @@
 #!/usr/bin/env python3 -u
 # copyright: predict-ably, BSD-3-Clause License (see LICENSE file)
-# Elements of predictably.validate reuse code developed for skbase. These elements
-# are copyrighted by the skbase developers, BSD-3-Clause License. For
-# conditions see https://github.com/sktime/skbase/blob/main/LICENSE
+# Many elements of this code were developed in scikit-learn. These elements
+# are copyrighted by the scikit-learn developers, BSD-3-Clause License. For
+# conditions see https://github.com/scikit-learn/scikit-learn/blob/main/COPYING
 """The base class used throughout `predictably_core`.
 
-`predictably_core` classes typically inherit from ``BaseClass``.
+`predictably_core` classes typically inherit from ``BaseObject`` or ``BaseEstimator``.
 """
 
 from __future__ import annotations
 
 import collections
+import copy
 import inspect
 import re
 import sys
-from copy import deepcopy
 from typing import Any, Callable, ClassVar, Iterable, Sequence
 
 if sys.version_info < (3, 11):
@@ -26,6 +26,7 @@ import attrs
 
 from predictably_core.config import get_config
 from predictably_core.config._config import _CONFIG_REGISTRY
+from predictably_core.core._clone import _clone_parametrized
 from predictably_core.core._exceptions import NotFittedError
 from predictably_core.core._pprint._object_html_repr import _object_html_repr
 from predictably_core.utils._iter import format_sequence_to_str
@@ -66,15 +67,8 @@ class BaseObject:
         ------
         RuntimeError if cls has varargs in __init__.
         """
-        # fetch the constructor
-        init = cls.__init__
-        if init is object.__init__:
-            # No explicit constructor to introspect
-            return []
-
-        # introspect the constructor arguments to find the model parameters
-        # to represent
-        init_signature = inspect.signature(init)
+        # introspect the constructor arguments to find the model parameters to represent
+        init_signature = inspect.signature(cls.__init__)
 
         # Consider the constructor parameters excluding 'self'
         parameters = [
@@ -85,7 +79,7 @@ class BaseObject:
         for p in parameters:
             if p.kind == p.VAR_POSITIONAL:
                 raise RuntimeError(
-                    "scikit-learn compatible estimators should always "
+                    "predictably and scikit-learn compatible objects should always "
                     "specify their parameters in the signature"
                     " of their __init__ (no varargs)."
                     f"{cls} with constructor {init_signature} doesn't "
@@ -95,22 +89,27 @@ class BaseObject:
         return parameters
 
     @classmethod
-    def _get_param_names(cls, init_only: bool = True) -> list[str]:
+    def _get_param_names(cls, init_only: bool = True, sort: bool = True) -> list[str]:
         """Get object's parameter names.
 
-        Optionally allow only return names of an ``attrs.field`` that is set to be
-        part of the object's initialization.
+        Optionally allows for only the names of parameters passed to the object's
+        initlaization be returned.
 
         Parameters
         ----------
         init_only : bool, default=True
-            Whether to only return ``attrs.field`` that are set to be part of the
-            object's initialization.
+            Whether to only return parameters passed to the object's initialization.
 
-            - If True, only values of an ``attrs.field`` that is set to be part of
-              the object's initialization are returned.
-            - If False, the values of any ``attrs.field`` defined on the object are
-              returned.
+            - If True, only names of parameters passed during the object's
+              initialization are returned.
+            - If False, the values of any parameters defined on the object that
+              are not name mangled or dunder-like are returned.
+
+        sort : bool, default=True
+            Whether to sort the parameter names.
+
+            - If True, then the parameter names are sorted.
+            - If False, then the parameter names are returned in signature order.
 
         Returns
         -------
@@ -118,29 +117,37 @@ class BaseObject:
             Alphabetically sorted list of parameter names of cls.
         """
         if init_only:
-            parameters = sorted([p.name for p in cls._get_init_signature()])
+            parameters = [p.name for p in cls._get_init_signature()]
         else:
-            parameters = sorted(attrs.fields_dict(cls).keys())
-
+            parameters = [*attrs.fields_dict(cls)]
+        if sort:
+            parameters = sorted(parameters)
         return parameters
 
     @classmethod
-    def _get_param_defaults(cls, init_only: bool = True) -> dict[str, Any]:
+    def _get_param_defaults(
+        cls, init_only: bool = True, sort: bool = True
+    ) -> dict[str, Any]:
         """Get object's parameter defaults.
 
-        Optionally allow only return names of an ``attrs.field`` that is set to be
-        part of the object's initialization.
+        Optionally allows for only the names of parameters passed to the object's
+        initlaization be returned.
 
         Parameters
         ----------
         init_only : bool, default=True
-            Whether to only return ``attrs.field`` that are set to be part of the
-            object's initialization.
+            Whether to only return parameters passed to the object's initialization.
 
-            - If True, only values of an ``attrs.field`` that is set to be part of
-              the object's initialization are returned.
-            - If False, the values of any ``attrs.field`` defined on the object are
-              returned.
+            - If True, only names of parameters passed during the object's
+              initialization are returned.
+            - If False, the values of any parameters defined on the object that
+              are not name mangled or dunder-like are returned.
+
+        sort : bool, default=True
+            Whether to sort the parameter names.
+
+            - If True, then the parameter names are sorted.
+            - If False, then the parameter names are returned in signature order.
 
         Returns
         -------
@@ -148,9 +155,13 @@ class BaseObject:
             Mapping of parameter names to their default values.
         """
         parameters = attrs.fields_dict(cls)
-        default_params = {
-            k: parameters[k].default for k in cls._get_param_names(init_only=init_only)
-        }
+        default_params = {}
+        for k in cls._get_param_names(init_only=init_only, sort=sort):
+            default_ = parameters[k].default
+            if isinstance(default_, attrs.Factory):
+                default_params[k] = default_.factory()
+            else:
+                default_params[k] = default_
         return default_params
 
     def get_params(self, deep: bool = True) -> dict[str, Any]:
@@ -191,11 +202,12 @@ class BaseObject:
         """
         parameters = self._get_param_names(init_only=True)
         missing_params = [p for p in parameters if not hasattr(self, p)]
+        cls_name = self.__class__.__name__
         if missing_params:
             param_str = "parameter" if len(missing_params) == 1 else "parameters"
             missing_param_str = format_sequence_to_str(missing_params, last_sep="and")
             msg = "BaseObject's should assign all init parameters to an attribute "
-            msg += f"with the same name.\n `BadObject` {param_str} {missing_param_str}"
+            msg += f"with the same name.\n `{cls_name}` {param_str} {missing_param_str}"
             msg += " did not follow this convention."
             raise AttributeError(msg)
 
@@ -204,7 +216,7 @@ class BaseObject:
         if deep:
             deep_params = {}
             for key, value in params.items():
-                if hasattr(value, "get_params"):
+                if hasattr(value, "get_params") and not isinstance(value, type):
                     deep_items = value.get_params().items()
                     deep_params.update({f"{key}__{k}": val for k, val in deep_items})
             params.update(deep_params)
@@ -232,6 +244,7 @@ class BaseObject:
             # Simple optimization to gain speed (inspect is slow)
             return self
         valid_params = self.get_params(deep=True)
+        param_name_str = format_sequence_to_str(list(valid_params), last_sep="or")
 
         nested_params: collections.defaultdict[str, Any] = collections.defaultdict(
             dict
@@ -240,9 +253,8 @@ class BaseObject:
             key, delim, sub_key = key.partition("__")
             if key not in valid_params:
                 raise ValueError(
-                    f"Invalid parameter {key} for object {self}. "
-                    "Check the list of available parameters "
-                    "with `object.get_params().keys()`."
+                    f"Invalid parameter {key!r} for object {self}. "
+                    f"Valid parameters are: {param_name_str}."
                 )
 
             if delim:
@@ -251,13 +263,35 @@ class BaseObject:
                 setattr(self, key, value)
                 valid_params[key] = value
 
-        self.reset()
-
         # recurse in components
         for key, sub_params in nested_params.items():
             valid_params[key].set_params(**sub_params)
 
         return self
+
+    def __sklearn_clone__(self) -> BaseObject:
+        """Implement default version of scikit-learn clone logic.
+
+        Child classes can override this with their specific implementation.
+
+        Returns
+        -------
+        BaseObject
+            A clone of the BaseObject.
+        """
+        return _clone_parametrized(self)
+
+    def __predictably_clone__(self) -> BaseObject:
+        """Implement default version of predictably clone logic.
+
+        Child classes can override this with their specific implementation.
+
+        Returns
+        -------
+        BaseObject
+            A clone of the BaseObject.
+        """
+        return _clone_parametrized(self)
 
     @classmethod
     def _get_class_flags(cls, flag_attr_name: str = "_tags") -> dict[str, Any]:
@@ -287,7 +321,7 @@ class BaseObject:
                 more_flags = getattr(parent_class, flag_attr_name)
                 collected_flags.update(more_flags)
 
-        return deepcopy(collected_flags)
+        return copy.deepcopy(collected_flags)
 
     @classmethod
     def _get_class_flag(
@@ -357,7 +391,7 @@ class BaseObject:
         if hasattr(self, f"{flag_attr_name}_dynamic"):
             collected_flags.update(getattr(self, f"{flag_attr_name}_dynamic"))
 
-        return deepcopy(collected_flags)
+        return copy.deepcopy(collected_flags)
 
     def _get_flag(
         self,
@@ -426,7 +460,7 @@ class BaseObject:
         Changes object state by setting flag values in flag_dict as dynamic flags
         in self.
         """
-        flag_update = deepcopy(flag_dict)
+        flag_update = copy.deepcopy(flag_dict)
         dynamic_flags = f"{flag_attr_name}_dynamic"
         if hasattr(self, dynamic_flags):
             getattr(self, dynamic_flags).update(flag_update)
@@ -467,7 +501,7 @@ class BaseObject:
         Changes object state by setting flag values in flag_set from object as
         dynamic flags in self.
         """
-        flags_est = deepcopy(obj._get_flags(flag_attr_name=flag_attr_name))
+        flags_est = copy.deepcopy(obj._get_flags(flag_attr_name=flag_attr_name))
 
         # if flag_set is not passed, default is all flags in object
         flag_names_: Iterable[str]
@@ -644,7 +678,7 @@ class BaseObject:
         # was set as the local override of the global config
         for config_param_, config_value in local_config.items():
             if config_param_ in _CONFIG_REGISTRY:
-                msg = "Invalid value encountered for global configuration parameter "
+                msg = "Invalid value encountered for local configuration parameter "
                 msg += f"{config_param_}. Using global parameter configuration value.\n"
                 config_value = _CONFIG_REGISTRY[
                     config_param_
@@ -715,6 +749,56 @@ class BaseObject:
 
         return self
 
+    def clone(self) -> BaseObject:
+        """Construct a new unfitted object with the same parameters.
+
+        Clone does a deep copy of the object without actually copying attached data.
+        It returns a new object with the same parameters that hasn't had additional
+        state changes made.
+
+        The clone is dispatched to the object if it implements a sklearn or predictably
+        clone dunder (i.e., `BaseObject.__sklearn_clone__` or
+        `BaseObject.__predictably_clone__`).
+
+        Returns
+        -------
+        object
+            The deep copy of the input.
+
+        Notes
+        -----
+        When BaseObject has a `random_state` parameter, the behavior differs depending
+        on the value set on the `random_state` parameter. If the `random_state`
+        parameter is an integer an *exact clone* is returned -- the clone and the object
+        will use the same exact random state. Otherwise, a *statistical clone* is
+        returned -- the clone might return different results when using its
+        random state.
+
+        Examples
+        --------
+        >>> from predictably_core.core import clone, BaseEstimator
+        >>> class YourEstimator(BaseEstimator):
+        ...
+        ...     def fit(self, x, y):
+        ...         self._is_fitted = True
+        ...         return self
+        >>> X = [[-1, 0], [0, 1], [0, -1], [1, 0]]
+        >>> y = [0, 0, 1, 1]
+        >>> estimator = YourEstimator()
+        >>> estimator.is_fitted
+        False
+        >>> estimator.fit(X, y)
+        YourEstimator()
+        >>> cloned_estimator = estimator.clone()
+        >>> estimator.is_fitted
+        True
+        >>> cloned_estimator.is_fitted
+        False
+        >>> estimator is cloned_estimator
+        False
+        """
+        return self.__predictably_clone__()
+
     def reset(self) -> Self:
         """Re-initialize the object to a post-init state.
 
@@ -764,7 +848,10 @@ class BaseObject:
             Whether an object has any parameters whose values are BaseObjects.
         """
         params = self.get_params(deep=False)
-        composite = any(isinstance(x, BaseObject) for x in params.values())
+        composite = any(
+            isinstance(x, BaseObject) or hasattr(x, "get_params")
+            for x in params.values()
+        )
 
         return composite
 

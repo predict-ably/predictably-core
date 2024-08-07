@@ -32,6 +32,15 @@ def test_base_object_pretty_printer_single_line():
     expected = "MockObject(param1=10, param2=20)"
     assert output.strip() == expected
 
+    obj = MockObject()  # unchanged from defaults
+    stream = io.StringIO()
+    printer = _BaseObjectPrettyPrinter(stream=stream, changed_only=False)
+
+    printer.pprint(obj)
+    output = stream.getvalue()
+    expected = "MockObject(param1=1, param2=2, param3=None)"
+    assert output.strip() == expected
+
 
 def test_base_object_pretty_printer_multiline():
     """
@@ -81,6 +90,11 @@ def test_safe_repr_dict():
     expected = "MockObject(param1=2, param2=3, param3=MockObject(param1={...}))"
     assert repr_str == expected
 
+    repr_str, _, _ = _safe_repr(obj, context, maxlevels=2, level=0, changed_only=False)
+    param3 = "param3=MockObject(param1={...}, param2=2, param3=None)"
+    expected = f"MockObject(param1=2, param2=3, {param3})"
+    assert repr_str == expected
+
 
 def test_safe_repr_base_object_changed_params():
     """
@@ -96,4 +110,9 @@ def test_safe_repr_base_object_changed_params():
     context = {}
     repr_str, _, _ = _safe_repr(obj, context, maxlevels=2, level=0, changed_only=True)
     expected = "MockObject(param1=10, param3='changed')"
+    assert repr_str == expected
+
+    context = {}
+    repr_str, _, _ = _safe_repr(obj, context, maxlevels=2, level=0, changed_only=False)
+    expected = "MockObject(param1=10, param2=2, param3='changed')"
     assert repr_str == expected
