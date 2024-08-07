@@ -385,14 +385,17 @@ def check_sequence(
 
     Examples
     --------
-    >>> from predictably_core.validate import is_sequence
+    >>> from predictably_core.validate import check_sequence
 
     >>> check_sequence([1, 2, 3])
     [1, 2, 3]
 
     Generators are not sequences so an error is raised
 
-    >>> check_sequence((c for c in [1, 2, 3])) # doctest: +SKIP
+    >>> check_sequence((c for c in [1, 2, 3]))  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    TypeError: Invalid sequence: Input sequence expected to be a sequence.
 
     The check can require a certain type of sequence
 
@@ -401,7 +404,10 @@ def check_sequence(
 
     Expected to raise and error because the input is not a tuple
 
-    >>> check_sequence([1, 2, 3, 4], sequence_type=tuple) # doctest: +SKIP
+    >>> check_sequence([1, 2, 3, 4], sequence_type=tuple)  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    TypeError: Invalid sequence: Input sequence expected to be a tuple.
 
     It is also possible to check the type of sequence elements
 
@@ -429,7 +435,7 @@ def check_sequence(
     if not is_valid_seqeunce:
         name_str = "Input sequence" if sequence_name is None else f"`{sequence_name}`"
         if sequence_type is None:
-            seq_str = "a sequence"
+            seq_str = "sequence"
         else:
             sequence_type_ = _convert_scalar_seq_type_input_to_tuple(
                 sequence_type,

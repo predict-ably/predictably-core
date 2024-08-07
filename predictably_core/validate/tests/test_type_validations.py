@@ -217,7 +217,7 @@ def test_check_sequence_output():
     # But false for generators, since they are iterable but not sequences
     with pytest.raises(
         TypeError,
-        match="Invalid sequence: Input sequence expected to be a a sequence.",
+        match="Invalid sequence: Input sequence expected to be a sequence.",
     ):
         assert check_sequence(c for c in [1, 2, 3])
 

@@ -1,4 +1,5 @@
-# copyright: skbase developers, BSD-3-Clause License (see LICENSE file)
+#!/usr/bin/env python3 -u
+# copyright: predict-ably, BSD-3-Clause License (see LICENSE file)
 # Elements of these tests reuse code developed in scikit-learn. These elements
 # are copyrighted by the scikit-learn developers, BSD-3-Clause License. For
 # conditions see https://github.com/scikit-learn/scikit-learn/blob/main/COPYING
@@ -29,8 +30,10 @@ from typing import Any, ClassVar
 import attrs
 import numpy as np
 import pytest
+import scipy.sparse as sp
 
 from predictably_core.core._base import BaseEstimator, BaseObject
+from predictably_core.core._clone import _clone_parametrized, clone
 from predictably_core.tests.conftest import Child, CompositionDummy, Parent
 
 __author__: list[str] = ["RNKuhns"]
@@ -53,11 +56,6 @@ __all__: list[str] = [
     "test_components",
     "test_components_raises_error_base_class_is_not_baseobject_subclass",
     "test_components_raises_error_base_class_is_not_class",
-    # "test_get_test_params",
-    # "test_get_test_params_raises_error_when_params_required",
-    # "test_create_test_instance",
-    # "test_create_test_instances_and_names",
-    # "test_has_implementation_of",
     "test_eq_dunder",
     "test_get_class_tag",
     "test_get_class_tags",
@@ -84,7 +82,7 @@ __all__: list[str] = [
 ]
 
 
-@attrs.define
+@attrs.define(slots=False)
 class ResetTester(BaseObject):
     """Class for testing reset functionality."""
 
@@ -143,6 +141,14 @@ class ModifyParam(BaseObject):
     def __init__(self, a=7):
         self.a = deepcopy(a)
         super().__init__()
+
+
+@attrs.define(slots=False)
+class NonInitParams(BaseObject):
+    """A class with non-init params defined using attrs."""
+
+    field_2: int = attrs.field(default=10)
+    field_1: int = attrs.field(default=20, init=False, repr=False)
 
 
 @pytest.fixture
@@ -234,6 +240,12 @@ def fixture_class_parent_expected_params():
 def fixture_class_instance_no_param_interface():
     """Pytest fixture class instance for NoParamInterface."""
     return NoParamInterface()
+
+
+@pytest.fixture
+def fixture_class_instance_no_init_params():
+    """Pytest fixture class instance for NonInitParams."""
+    return NonInitParams()
 
 
 # Fixture class for testing tag system, object overrides class tags
@@ -619,6 +631,7 @@ def test_get_init_signature_raises_error_for_invalid_signature(
 def test_get_param_names(
     fixture_object: type[BaseObject],
     fixture_class_parent: type[Parent],
+    fixture_class_instance_no_init_params: BaseObject,
     fixture_class_parent_expected_params: dict[str, Any],
 ):
     """Test that _get_param_names returns list of string parameter names."""
@@ -627,6 +640,44 @@ def test_get_param_names(
 
     param_names = fixture_object._get_param_names()
     assert param_names == []
+
+    param_names = fixture_class_instance_no_init_params._get_param_names()
+    assert param_names == ["field_2"]
+    param_names = fixture_class_instance_no_init_params._get_param_names(
+        init_only=False
+    )
+    assert param_names == ["_config_dynamic", "_tags_dynamic", "field_1", "field_2"]
+    param_names = fixture_class_instance_no_init_params._get_param_names(
+        init_only=False, sort=False
+    )
+    assert param_names == ["_tags_dynamic", "_config_dynamic", "field_2", "field_1"]
+
+
+def test_get_param_defaults(fixture_class_instance_no_init_params):
+    """Test _get_param_defaults method returns expected."""
+    defaults = fixture_class_instance_no_init_params._get_param_defaults(init_only=True)
+    assert defaults == {"field_2": 10}
+    defaults = fixture_class_instance_no_init_params._get_param_defaults(
+        init_only=False
+    )
+    expected_defaults = {
+        "_config_dynamic": {},
+        "_tags_dynamic": {},
+        "field_1": 20,
+        "field_2": 10,
+    }
+    assert defaults == expected_defaults
+
+    defaults = fixture_class_instance_no_init_params._get_param_defaults(
+        init_only=False
+    )
+    expected_defaults = {
+        "_tags_dynamic": {},
+        "_config_dynamic": {},
+        "field_2": 10,
+        "field_1": 20,
+    }
+    assert defaults == expected_defaults
 
 
 def test_get_params(
@@ -790,159 +841,244 @@ def test_set_params_with_no_param_to_set_returns_object(
     )
 
 
+def test_set_config_get_config(fixture_class_parent_instance):
+    """Test _set_config correctly sets the local config."""
+    starting_config = fixture_class_parent_instance._get_config()
+    fixture_class_parent_instance._set_config(
+        **{"some_config": 11, "some_other_config": 22}
+    )
+    expected_config = starting_config.copy()
+    expected_config.update({"some_config": 11, "some_other_config": 22})
+    assert fixture_class_parent_instance._get_config() == expected_config
+    assert fixture_class_parent_instance._get_config(config_param="some_config") == {
+        "some_config": 11
+    }
+    assert fixture_class_parent_instance._get_config(
+        config_param=("some_config", "some_other_config")
+    ) == {
+        "some_config": 11,
+        "some_other_config": 22,
+    }
+
+
 # This section tests the clone functionality
 # These have been adapted from sklearn's tests of clone to use the clone
 # method that is included as part of the BaseObject interface
-# def test_clone(fixture_class_parent_instance: Parent):
-#     """Test that clone is making a deep copy as expected."""
-#     # Creates a BaseObject and makes a copy of its original state
-#     # (which, in this case, is the current state of the BaseObject),
-#     # and check that the obtained copy is a correct deep copy.
-#     new_base_obj = fixture_class_parent_instance.clone()
-#     assert fixture_class_parent_instance is not new_base_obj
-#     assert fixture_class_parent_instance.get_params() == new_base_obj.get_params()
+def test_clone(fixture_class_parent_instance: Parent):
+    """Test that clone is making a deep copy as expected."""
+    # Creates a BaseObject and makes a copy of its original state
+    # (which, in this case, is the current state of the BaseObject),
+    # and check that the obtained copy is a correct deep copy.
+    new_base_obj = fixture_class_parent_instance.clone()
+    assert fixture_class_parent_instance is not new_base_obj
+    assert fixture_class_parent_instance.get_params() == new_base_obj.get_params()
+
+    new_base_obj2 = clone(fixture_class_parent_instance)
+    assert fixture_class_parent_instance is not new_base_obj2
+    assert fixture_class_parent_instance.get_params() == new_base_obj2.get_params()
+
+    new_base_obj3 = fixture_class_parent_instance.__sklearn_clone__()
+    assert fixture_class_parent_instance is not new_base_obj3
+    assert fixture_class_parent_instance.get_params() == new_base_obj3.get_params()
+
+    new_base_obj4 = fixture_class_parent_instance.__predictably_clone__()
+    assert fixture_class_parent_instance is not new_base_obj4
+    assert fixture_class_parent_instance.get_params() == new_base_obj4.get_params()
 
 
-# def test_clone_2(fixture_class_parent_instance: Parent):
-#     """Test that clone does not copy attributes not set in constructor."""
-#     # We first create an estimator, give it an own attribute, and
-#     # make a copy of its original state. Then we check that the copy doesn't
-#     # have the specific attribute we manually added to the initial estimator.
+def test_clone_2(fixture_class_parent_instance: Parent):
+    """Test that clone does not copy attributes not set in constructor."""
+    # We first create an estimator, give it an own attribute, and
+    # make a copy of its original state. Then we check that the copy doesn't
+    # have the specific attribute we manually added to the initial estimator.
 
-#     # base_obj = fixture_class_parent(a=7.0, b="some_str")
-#     fixture_class_parent_instance.own_attribute = "test"
-#     new_base_obj = fixture_class_parent_instance.clone()
-#     assert not hasattr(new_base_obj, "own_attribute")
-
-
-# def test_clone_raises_error_for_nonconforming_objects(
-#     fixture_invalid_init: Type[InvalidInitSignatureTester],
-#     fixture_buggy: Type[Buggy],
-#     fixture_modify_param: Type[ModifyParam],
-# ):
-#     """Test that clone raises an error on nonconforming BaseObjects."""
-#     buggy = fixture_buggy()
-#     buggy.set_config(**{"check_clone": True})
-#     buggy.a = 2
-#     with pytest.raises(RuntimeError):
-#         buggy.clone()
-
-#     varg_obj = fixture_invalid_init(a=7)
-#     varg_obj.set_config(**{"check_clone": True})
-#     with pytest.raises(RuntimeError):
-#         varg_obj.clone()
-
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_param_is_none(fixture_class_parent: Type[Parent]):
-#     """Test clone with keyword parameter set to None."""
-#     from sklearn.base import clone
-
-#     base_obj = fixture_class_parent(c=None)
-#     new_base_obj = clone(base_obj)
-#     new_base_obj2 = base_obj.clone()
-#     assert base_obj.c is new_base_obj.c
-#     assert base_obj.c is new_base_obj2.c
+    fixture_class_parent_instance.own_attribute = "test"
+    new_base_obj = fixture_class_parent_instance.clone()
+    new_base_obj2 = clone(fixture_class_parent_instance)
+    new_base_obj3 = fixture_class_parent_instance.__sklearn_clone__()
+    new_base_obj4 = fixture_class_parent_instance.__predictably_clone__()
+    assert not hasattr(new_base_obj, "own_attribute")
+    assert not hasattr(new_base_obj2, "own_attribute")
+    assert not hasattr(new_base_obj3, "own_attribute")
+    assert not hasattr(new_base_obj4, "own_attribute")
 
 
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_empty_array(fixture_class_parent: Type[Parent]):
-#     """Test clone with keyword parameter is scipy sparse matrix.
+def test_clone_raises_error_for_nonconforming_objects(
+    fixture_invalid_init: type[InvalidInitSignatureTester],
+    fixture_buggy: type[Buggy],
+):
+    """Test that clone raises an error on nonconforming BaseObjects."""
+    buggy = fixture_buggy()
+    buggy.a = 2
+    with pytest.raises(RuntimeError):
+        buggy.clone()
 
-#     This test is based on scikit-learn regression test to make sure clone
-#     works with default parameter set to scipy sparse matrix.
-#     """
-#     from sklearn.base import clone
+    with pytest.raises(RuntimeError):
+        clone(buggy)
 
-#     # Regression test for cloning estimators with empty arrays
-#     base_obj = fixture_class_parent(c=np.array([]))
-#     new_base_obj = clone(base_obj)
-#     new_base_obj2 = base_obj.clone()
-#     np.testing.assert_array_equal(base_obj.c, new_base_obj.c)
-#     np.testing.assert_array_equal(base_obj.c, new_base_obj2.c)
+    varg_obj = fixture_invalid_init(a=7)
+    with pytest.raises(RuntimeError):
+        varg_obj.clone()
 
-
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_sparse_matrix(fixture_class_parent: Type[Parent]):
-#     """Test clone with keyword parameter is scipy sparse matrix.
-
-#     This test is based on scikit-learn regression test to make sure clone
-#     works with default parameter set to scipy sparse matrix.
-#     """
-#     from sklearn.base import clone
-
-#     base_obj = fixture_class_parent(c=sp.csr_matrix(np.array([[0]])))
-#     new_base_obj = clone(base_obj)
-#     new_base_obj2 = base_obj.clone()
-#     np.testing.assert_array_equal(base_obj.c, new_base_obj.c)
-#     np.testing.assert_array_equal(base_obj.c, new_base_obj2.c)
+    with pytest.raises(RuntimeError):
+        clone(varg_obj)
 
 
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_nan(fixture_class_parent: Type[Parent]):
-#     """Test clone with keyword parameter is np.nan.
-
-#     This test is based on scikit-learn regression test to make sure clone
-#     works with default parameter set to np.nan.
-#     """
-#     from sklearn.base import clone
-
-#     # Regression test for cloning estimators with default parameter as np.nan
-#     base_obj = fixture_class_parent(c=np.nan)
-#     new_base_obj = clone(base_obj)
-#     new_base_obj2 = base_obj.clone()
-
-#     assert base_obj.c is new_base_obj.c
-#     assert base_obj.c is new_base_obj2.c
+def test_clone_param_is_none(fixture_class_parent: type[Parent]):
+    """Test clone with keyword parameter set to None."""
+    base_obj = fixture_class_parent(c=None)
+    new_base_obj = clone(base_obj)
+    new_base_obj2 = base_obj.clone()
+    assert base_obj.c is new_base_obj.c
+    assert base_obj.c is new_base_obj2.c
 
 
-# def test_clone_estimator_types(fixture_class_parent: Type[Parent]):
-#     """Test clone works for parameters that are types rather than instances."""
-#     base_obj = fixture_class_parent(c=fixture_class_parent)
-#     new_base_obj = base_obj.clone()
+def test_clone_empty_array(fixture_class_parent: type[Parent]):
+    """Test clone when keyword parameter is numpy matrix.
 
-#     assert base_obj.c == new_base_obj.c
-
-
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_class_rather_than_instance_raises_error(
-#     fixture_class_parent: Type[Parent],
-# ):
-#     """Test clone raises expected error when cloning a class not an instance."""
-#     from sklearn.base import clone
-
-#     msg = "You should provide an instance of scikit-learn estimator"
-#     with pytest.raises(TypeError, match=msg):
-#         clone(fixture_class_parent)
+    This test is based on scikit-learn to make sure it works with numpy matrix.
+    """
+    # Regression test for cloning estimators with empty arrays
+    base_obj = fixture_class_parent(c=np.array([]))
+    new_base_obj = clone(base_obj)
+    new_base_obj2 = base_obj.clone()
+    np.testing.assert_array_equal(base_obj.c, new_base_obj.c)
+    np.testing.assert_array_equal(base_obj.c, new_base_obj2.c)
 
 
-# @pytest.mark.skipif(
-#     not _check_soft_dependencies("sklearn", severity="none"),
-#     reason="skip test if sklearn is not available",
-# )  # sklearn is part of the dev dependency set, test should be executed with that
-# def test_clone_sklearn_composite(fixture_class_parent: Type[Parent]):
-#     """Test clone with keyword parameter set to None."""
-#     from sklearn.ensemble import GradientBoostingRegressor
+def test_clone_sparse_matrix(fixture_class_parent: type[Parent]):
+    """Test clone with keyword parameter is scipy sparse matrix.
 
-#     sklearn_obj = GradientBoostingRegressor(random_state=5, learning_rate=0.02)
-#     composite = ResetTester(a=sklearn_obj)
-#     composite_set = composite.clone().set_params(a__random_state=42)
-#     assert composite.get_params()["a__random_state"] == 5
-#     assert composite_set.get_params()["a__random_state"] == 42
+    This test is based on scikit-learn regression test to make sure clone
+    works with default parameter set to scipy sparse matrix.
+    """
+    base_obj = fixture_class_parent(c=sp.csr_matrix(np.array([[0]])))
+    new_base_obj = clone(base_obj)
+    new_base_obj2 = base_obj.clone()
+    np.testing.assert_array_equal(base_obj.c, new_base_obj.c)
+    np.testing.assert_array_equal(base_obj.c, new_base_obj2.c)
+
+
+def test_clone_nan(fixture_class_parent: type[Parent]):
+    """Test clone with keyword parameter is np.nan.
+
+    This test is based on scikit-learn regression test to make sure clone
+    works with default parameter set to np.nan.
+    """
+    # Regression test for cloning estimators with default parameter as np.nan
+    base_obj = fixture_class_parent(c=np.nan)
+    new_base_obj = clone(base_obj)
+    new_base_obj2 = base_obj.clone()
+
+    assert base_obj.c is new_base_obj.c
+    assert base_obj.c is new_base_obj2.c
+
+
+def test_clone_estimator_types(fixture_class_parent: type[Parent]):
+    """Test clone works for parameters that are types rather than instances."""
+    base_obj = fixture_class_parent(c=fixture_class_parent)
+    new_base_obj = base_obj.clone()
+    new_base_obj2 = clone(base_obj)
+
+    assert base_obj.c == new_base_obj.c
+    assert base_obj.c == new_base_obj2.c
+
+
+def test_clone_class_rather_than_instance_raises_error(
+    fixture_class_parent: type[Parent],
+):
+    """Test clone raises expected error when cloning a class not an instance."""
+    msg = "Cannot clone object. You should provide an instance instead of a class."
+    with pytest.raises(TypeError, match=msg):
+        clone(fixture_class_parent)
+
+
+def test_clone_sklearn_composite():
+    """Test clone with keyword parameter set to None."""
+    from sklearn.ensemble import GradientBoostingRegressor
+
+    sklearn_obj = GradientBoostingRegressor(random_state=5, learning_rate=0.02)
+    composite = ResetTester(a=sklearn_obj)
+    composite_set = composite.clone().set_params(a__random_state=42)
+    assert composite.get_params()["a__random_state"] == 5
+    assert composite_set.get_params()["a__random_state"] == 42
+
+
+def test_clone_function_with_iterable_input(fixture_class_parent_instance):
+    """Test that clone function works with iterable inputs."""
+    list_of_objects = [fixture_class_parent_instance, fixture_class_parent_instance]
+    cloned_objects = clone(list_of_objects)
+    assert type(list_of_objects) is list
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects, cloned_objects):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
+
+    list_of_objects = (fixture_class_parent_instance, fixture_class_parent_instance)
+    cloned_objects = clone(list_of_objects)
+    assert type(list_of_objects) is tuple
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects, cloned_objects):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
+
+
+def test_clone_function_with_dict_input(fixture_class_parent_instance):
+    """Test that clone function works with iterable inputs."""
+    list_of_objects = {
+        "one": fixture_class_parent_instance,
+        "two": fixture_class_parent_instance,
+    }
+    cloned_objects = clone(list_of_objects)
+    assert type(list_of_objects) is dict
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects.values(), cloned_objects.values()):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
+
+
+def test_clone_function_with_non_base_object_raises():
+    """Test that clone function raises error for non-BaseObject."""
+    with pytest.raises(TypeError):
+        clone(11)
+
+
+def test_clone_function_with_sklearn_clone_dunder():
+    """Test that clone function works with the __sklearn_clone_dunder__."""
+    from sklearn.ensemble import GradientBoostingRegressor
+
+    sklearn_obj = GradientBoostingRegressor(random_state=5, learning_rate=0.02)
+    cloned_object = clone(sklearn_obj)
+    assert hasattr(sklearn_obj, "__sklearn_clone__")
+    assert cloned_object is not sklearn_obj
+    assert cloned_object.get_params() == sklearn_obj.get_params()
+
+
+def test_clone_parametrized_function_with_dict_input(fixture_class_parent_instance):
+    """Test that _clone_parametrized function works with iterable inputs."""
+    list_of_objects = {
+        "one": fixture_class_parent_instance,
+        "two": fixture_class_parent_instance,
+    }
+    cloned_objects = _clone_parametrized(list_of_objects)
+    assert type(list_of_objects) is dict
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects.values(), cloned_objects.values()):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
+
+
+def test_clone_parametrized_function_with_iterable_input(fixture_class_parent_instance):
+    """Test that _clone_parametrized function works with iterable inputs."""
+    list_of_objects = [fixture_class_parent_instance, fixture_class_parent_instance]
+    cloned_objects = _clone_parametrized(list_of_objects)
+    assert type(list_of_objects) is list
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects, cloned_objects):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
+
+    list_of_objects = (fixture_class_parent_instance, fixture_class_parent_instance)
+    cloned_objects = _clone_parametrized(list_of_objects)
+    assert type(list_of_objects) is tuple
+    assert len(list_of_objects) == 2
+    for orig_, clone_ in zip(list_of_objects, cloned_objects):
+        assert orig_ is not clone_ and orig_.get_params() == clone_.get_params()
 
 
 # Tests of BaseObject pretty printing representation inspired by sklearn
@@ -970,8 +1106,11 @@ def test_baseobject_repr(
         ("step 1", fixture_class_parent()),
         ("step 2", fixture_class_parent()),
     ]
-    base_obj = fixture_class_parent(c=named_objs)
-    assert repr(base_obj) == "Parent(c=[('step 1', Parent()), ('step 2', Parent())])"
+    base_obj_with_named_objs = fixture_class_parent(c=named_objs)
+    assert (
+        repr(base_obj_with_named_objs)
+        == "Parent(c=[('step 1', Parent()), ('step 2', Parent())])"
+    )
 
     # Or when they are just lists of tuples or just tuples as param
     base_obj = fixture_class_parent(c=[("one", 1), ("two", 2)])
@@ -989,6 +1128,24 @@ def test_baseobject_repr(
     named_objs = [(f"Step {i + 1}", Child()) for i in range(25)]
     base_comp = CompositionDummy(foo=Parent(c=Child(c=named_objs)))
     assert len(repr(base_comp)) == 1362
+
+    long_base_obj = fixture_class_parent(
+        a=100000000000000000000000000000000, c=base_obj_with_named_objs
+    )
+    expected_ = "\n".join(
+        [
+            "Parent(a=100000000000000000000000000000000,",
+            "       c=Parent(c=[('step 1', Parent()), ('step 2', Parent())]))",
+        ]
+    )
+    assert repr(long_base_obj) == expected_
+    expected_ = "\n".join(
+        [
+            "Parent(a=...",
+            "       c=Parent(c=[('step 1', Parent()), ('step 2', Parent())]))",
+        ]
+    )
+    assert long_base_obj.__repr__(n_char_max=19) == expected_
 
 
 def test_baseobject_str(fixture_class_parent_instance: Parent):
