@@ -18,7 +18,7 @@ __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = ["_clone_parametrized", "clone"]
 
 
-def clone(obj, *, safe=True):
+def clone(obj, *, safe: bool = True):
     """Construct a new unfitted object with the same parameters.
 
     Clone does a deep copy of the object without actually copying attached data.
@@ -93,7 +93,7 @@ def clone(obj, *, safe=True):
     return _clone_parametrized(obj, safe=safe)
 
 
-def _clone_parametrized(obj, *, safe=True):
+def _clone_parametrized(obj, *, safe: bool = True):
     """Implement default logic to clone "parametrized" BaseObjects.
 
     Parametrized objects include BaseObjects and related classes that follow

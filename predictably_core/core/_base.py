@@ -22,8 +22,6 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-import attrs
-
 from predictably_core.config import get_config
 from predictably_core.config._config import _CONFIG_REGISTRY
 from predictably_core.core._clone import _clone_parametrized
@@ -35,7 +33,6 @@ __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = ["BaseEstimator", "BaseObject"]
 
 
-@attrs.define(kw_only=True, slots=False, repr=False)
 class BaseObject:
     """Base class for `predictably` classes with tag and config management.
 
@@ -45,12 +42,35 @@ class BaseObject:
 
     _tags: ClassVar[dict[str, Any]] = {}
     _config: ClassVar[dict[str, Any]] = {}
-    _tags_dynamic: dict[str, Any] = attrs.field(
-        init=False, repr=False, alias="_tags_dynamic", factory=dict
-    )
-    _config_dynamic: dict[str, Any] = attrs.field(
-        init=False, repr=False, alias="_config_dynamic", factory=dict
-    )
+
+    def __init__(self) -> None:
+        """Initialize the object."""
+        self._tags_dynamic: dict[str, Any] = {}
+        self._config_dynamic: dict[str, Any] = {}
+        super().__init__()
+
+    def __eq__(self, other: Any):
+        """Equality dunder.
+
+        Only returns true if two BaseObjects are being compared and they have
+        equal sets of parameters.
+
+        Parameters
+        ----------
+        other : Any
+            The object to compare to the BaseObject.
+
+        Returns
+        -------
+        bool
+            Whether `other` is equal to the BaseObject.
+        """
+        if not isinstance(other, BaseObject):
+            return False
+
+        self_params = self.get_params(deep=False)
+        other_params = other.get_params(deep=False)
+        return self_params == other_params
 
     @classmethod
     def _get_init_signature(cls) -> list[inspect.Parameter]:
@@ -89,7 +109,7 @@ class BaseObject:
         return parameters
 
     @classmethod
-    def _get_param_names(cls, init_only: bool = True, sort: bool = True) -> list[str]:
+    def _get_param_names(cls, sort: bool = True) -> list[str]:
         """Get object's parameter names.
 
         Optionally allows for only the names of parameters passed to the object's
@@ -97,14 +117,6 @@ class BaseObject:
 
         Parameters
         ----------
-        init_only : bool, default=True
-            Whether to only return parameters passed to the object's initialization.
-
-            - If True, only names of parameters passed during the object's
-              initialization are returned.
-            - If False, the values of any parameters defined on the object that
-              are not name mangled or dunder-like are returned.
-
         sort : bool, default=True
             Whether to sort the parameter names.
 
@@ -116,18 +128,13 @@ class BaseObject:
         list[str]
             Alphabetically sorted list of parameter names of cls.
         """
-        if init_only:
-            parameters = [p.name for p in cls._get_init_signature()]
-        else:
-            parameters = [*attrs.fields_dict(cls)]
+        parameters = [p.name for p in cls._get_init_signature()]
         if sort:
             parameters = sorted(parameters)
         return parameters
 
     @classmethod
-    def _get_param_defaults(
-        cls, init_only: bool = True, sort: bool = True
-    ) -> dict[str, Any]:
+    def _get_param_defaults(cls, sort: bool = True) -> dict[str, Any]:
         """Get object's parameter defaults.
 
         Optionally allows for only the names of parameters passed to the object's
@@ -135,14 +142,6 @@ class BaseObject:
 
         Parameters
         ----------
-        init_only : bool, default=True
-            Whether to only return parameters passed to the object's initialization.
-
-            - If True, only names of parameters passed during the object's
-              initialization are returned.
-            - If False, the values of any parameters defined on the object that
-              are not name mangled or dunder-like are returned.
-
         sort : bool, default=True
             Whether to sort the parameter names.
 
@@ -154,14 +153,10 @@ class BaseObject:
         dict[str, Any]
             Mapping of parameter names to their default values.
         """
-        parameters = attrs.fields_dict(cls)
-        default_params = {}
-        for k in cls._get_param_names(init_only=init_only, sort=sort):
-            default_ = parameters[k].default
-            if isinstance(default_, attrs.Factory):
-                default_params[k] = default_.factory()
-            else:
-                default_params[k] = default_
+        parameters = cls._get_init_signature()
+        default_params = {p.name: p.default for p in parameters}
+        if sort:
+            default_params = {n: default_params[n] for n in sorted(default_params)}
         return default_params
 
     def get_params(self, deep: bool = True) -> dict[str, Any]:
@@ -200,7 +195,7 @@ class BaseObject:
             If the object does not assign all init parameters to attributes with the
             same name.
         """
-        parameters = self._get_param_names(init_only=True)
+        parameters = self._get_param_names(sort=False)
         missing_params = [p for p in parameters if not hasattr(self, p)]
         cls_name = self.__class__.__name__
         if missing_params:
@@ -889,7 +884,7 @@ class BaseObject:
             raise TypeError(msg)
 
         # retrieve parameter names to exclude them later
-        param_names = self._get_param_names()
+        param_names = self._get_param_names(sort=False)
 
         # retrieve all attributes that are BaseObject descendants
         attrs = [attr for attr in dir(self) if "__" not in attr]
@@ -1024,16 +1019,16 @@ class BaseObject:
         return output
 
 
-@attrs.define(kw_only=False, slots=False, repr=False)
 class BaseEstimator(BaseObject):
     """Base class for estimators with scikit-learn and sktime design patterns.
 
     Extends BaseObject to include basic functionality for fittable estimators.
     """
 
-    _is_fitted: bool = attrs.field(
-        init=False, repr=False, alias="_is_fitted", default=False, eq=False
-    )
+    def __init__(self) -> None:
+        """Initialize the object."""
+        self._is_fitted: bool = False
+        super().__init__()
 
     @property
     def is_fitted(self) -> bool:

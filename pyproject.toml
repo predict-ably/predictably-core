@@ -32,9 +32,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 requires-python = ">=3.8,<3.13"
-dependencies = [
-    "attrs>=0.22.2", "typing-extensions"
-]
+dependencies = ["typing-extensions"]
 
 [project.optional-dependencies]
 dev = [
