@@ -13,12 +13,20 @@ from __future__ import annotations
 import collections
 import copy
 import inspect
+from typing import TYPE_CHECKING, Sequence, TypeAlias
+
+if TYPE_CHECKING:
+    from predictably_core.core._base import BaseObject
 
 __author__: list[str] = ["RNKuhns"]
 __all__: list[str] = ["_clone_parametrized", "clone"]
 
+CLONABLE_OBJECTS: TypeAlias = (
+    BaseObject | Sequence[BaseObject] | set[BaseObject] | dict[str, BaseObject]
+)
 
-def clone(obj, *, safe=True):
+
+def clone(obj: CLONABLE_OBJECTS, *, safe: bool = True):
     """Construct a new unfitted object with the same parameters.
 
     Clone does a deep copy of the object without actually copying attached data.
@@ -93,7 +101,7 @@ def clone(obj, *, safe=True):
     return _clone_parametrized(obj, safe=safe)
 
 
-def _clone_parametrized(obj, *, safe=True):
+def _clone_parametrized(obj: CLONABLE_OBJECTS, *, safe: bool = True):
     """Implement default logic to clone "parametrized" BaseObjects.
 
     Parametrized objects include BaseObjects and related classes that follow
