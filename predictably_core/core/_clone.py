@@ -143,10 +143,8 @@ def _clone_parametrized(obj, *, safe=True):
 
     new_object = klass(**new_object_params)
     # Handle metadata request/routing
-    try:  # noqa: SIM105
+    if hasattr(obj, "_metadata_request"):
         new_object._metadata_request = copy.deepcopy(obj._metadata_request)
-    except AttributeError:
-        pass
 
     params_set = new_object.get_params(deep=False)
 
