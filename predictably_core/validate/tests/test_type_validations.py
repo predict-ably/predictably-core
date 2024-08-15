@@ -17,21 +17,68 @@ tests in this module test the functionality of:
 from __future__ import annotations
 
 import pathlib
+from collections import defaultdict
 
 import numpy as np
 import pytest
 
 from predictably_core.core._base import BaseEstimator, BaseObject
 from predictably_core.validate import (
+    check_mapping,
     check_path,
     check_sequence,
     check_type,
     is_iterable,
+    is_mapping,
     is_sequence,
 )
 from predictably_core.validate._types import _is_scalar_nan
 
 __author__: list[str] = ["RNKuhns"]
+
+_mapping_test_cases = [
+    {"case": {"something": 1, "something_else": 2}, "params": {}, "valid": True},
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"key_type": str},
+        "valid": True,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"key_type": str, "value_type": int},
+        "valid": True,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"key_type": str, "value_type": float},
+        "valid": False,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"key_type": float, "value_type": str},
+        "valid": False,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"key_type": float},
+        "valid": False,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"value_type": str},
+        "valid": False,
+    },
+    {
+        "case": {"something": 1, "something_else": 2},
+        "params": {"map_type": defaultdict},
+        "valid": False,
+    },
+    {
+        "case": defaultdict(lambda: 0, {"something": 1, "something_else": 2}),
+        "params": {"map_type": dict},
+        "valid": True,
+    },
+]
 
 
 @pytest.fixture
@@ -44,6 +91,24 @@ def fixture_object_instance():
 def fixture_estimator_instance():
     """Pytest fixture of BaseObject instance."""
     return BaseEstimator()
+
+
+@pytest.mark.parametrize("mapping_cases", _mapping_test_cases)
+def test_is_mapping(mapping_cases) -> None:
+    """Test is_mapping works as expected."""
+    is_valid = is_mapping(mapping_cases["case"], **mapping_cases["params"])
+    assert is_valid == mapping_cases["valid"]
+
+
+@pytest.mark.parametrize("mapping_cases", _mapping_test_cases)
+def test_check_mapping(mapping_cases) -> None:
+    """Test check_mapping works as expected."""
+    if mapping_cases["valid"]:
+        mapping = check_mapping(mapping_cases["case"], **mapping_cases["params"])
+        assert mapping == mapping_cases["case"]
+    else:
+        with pytest.raises(ValueError, match=r"The mapping `input_` is invalid\..*"):
+            check_mapping(mapping_cases["case"], **mapping_cases["params"])
 
 
 def test_is_iterable() -> None:
