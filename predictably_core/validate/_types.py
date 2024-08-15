@@ -16,6 +16,7 @@ import inspect
 import math
 import numbers
 import pathlib
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Sequence, TypeVar, overload
 
 from predictably_core.utils._iter import (
@@ -42,7 +43,7 @@ T = TypeVar("T")
 
 def is_mapping(
     input_: T,
-    mapping_type: type = dict,
+    map_type: type[Mapping] = Mapping,
     key_type: type | Sequence[type] | None = None,
     value_type: type | Sequence[type] | None = None,
 ) -> bool:
@@ -56,7 +57,7 @@ def is_mapping(
     input_ : Any
         The input to check to see if it is a mapping that optionally has
         the expected key and value types.
-    mapping_type : type, default=dict
+    map_type : type, default=Mapping
         The expected type of the mapping.
     key_type : type or tuple[type], default=None
         The allowed type(s) for elements of `seq`.
@@ -70,6 +71,7 @@ def is_mapping(
 
     Examples
     --------
+    >>> from collections import defaultdict
     >>> from predictably_core.validate import is_mapping
     >>> some_map = {"something": 1, "something_else": 2}
     >>> is_mapping(some_map)
@@ -84,9 +86,11 @@ def is_mapping(
     True
     >>> is_mapping(some_map, value_type=float)
     False
+    >>> is_mapping(some_map, map_type=defaultdict)
+    False
     """
     is_valid_mapping: bool = True
-    if not isinstance(input_, mapping_type):
+    if not isinstance(input_, map_type):
         is_valid_mapping = False
 
     # Optionally verify keys and values have correct types
@@ -108,7 +112,7 @@ def is_mapping(
 
 def check_mapping(
     input_: T,
-    mapping_type: type = dict,
+    map_type: type[Mapping] = Mapping,
     key_type: type | Sequence[type] | None = None,
     value_type: type | Sequence[type] | None = None,
     input_error_name: str = "input_",
@@ -122,7 +126,7 @@ def check_mapping(
     input_ : Any
         The input to check to see if it is a mapping that optionally has
         the expected key and value types.
-    mapping_type : type, default=dict
+    map_type : type, default=Mapping
         The expected type of the mapping.
     key_type : type or tuple[type], default=None
         The allowed type(s) for elements of `seq`.
@@ -147,6 +151,7 @@ def check_mapping(
 
     Examples
     --------
+    >>> from collections import defaultdict
     >>> from predictably_core.validate import check_mapping
     >>> some_map = {"something": 1, "something_else": 2}
     >>> check_mapping(some_map)
@@ -157,7 +162,6 @@ def check_mapping(
     Traceback (most recent call last):
         ...
     ValueError: The mapping `input_` is invalid.
-    ...
     >>> check_mapping(some_map, key_type=(int, str))
     {'something': 1, 'something_else': 2}
     >>> check_mapping(some_map, key_type=str, value_type=int)
@@ -166,16 +170,19 @@ def check_mapping(
     Traceback (most recent call last):
         ...
     ValueError: The mapping `input_` is invalid.
-    ...
+    >>> check_mapping(some_map, map_type=defaultdict)
+    Traceback (most recent call last):
+        ...
+    ValueError: The mapping `input_` is invalid.
     """
     is_valid_mapping = is_mapping(
         input_=input_,
-        mapping_type=mapping_type,
+        map_type=map_type,
         key_type=key_type,
         value_type=value_type,
     )
     if not is_valid_mapping:
-        raise ValueError(f"The mapping `{input_error_name}` is invalid.\n")
+        raise ValueError(f"The mapping `{input_error_name}` is invalid.")
     return input_
 
 
