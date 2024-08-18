@@ -3,7 +3,7 @@
 # Elements of predictably.utils reuse code developed for skbase. These elements
 # are copyrighted by the skbase developers, BSD-3-Clause License. For
 # conditions see https://github.com/sktime/skbase/blob/main/LICENSE
-""":mod:`predictably.utils` includes utility functionality used through `predictably`.
+""":mod:`predictably_core.utils` includes utilities used in the `predictably` framework.
 
 This module includes general utilities.
 """
