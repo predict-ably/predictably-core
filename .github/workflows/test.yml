@@ -39,7 +39,7 @@ jobs:
 
       - name: Get changed files
         id: Changed-files
-        uses: tj-actions/changed-files@v44.5.7
+        uses: tj-actions/changed-files@v45.0.2
 
       - name: List changed files
         run: echo '${{ steps.changed-files.outputs.all_changed_files }}'
