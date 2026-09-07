@@ -44,7 +44,7 @@ def remove_type_text(input_: str | type) -> str:
     if not isinstance(input_, str):
         input_ = str(input_)
 
-    m = re.match("^<class '(.*)'>$", input_)
+    m = re.match(r"^<class '(.*)'>$", input_)
 
     if m:
         return m[1]
