@@ -341,7 +341,11 @@ def _safe_repr(obj, context, maxlevels, level, changed_only=False):
             if krecur or vrecur:
                 recursive = True
         del context[objid]
-        return "{%s}" % ", ".join(components), rdable, recursive  # noqa: RUF100, UP031
+        return (
+            "{%s}" % ", ".join(components),
+            rdable,
+            recursive,
+        )  # ruff: ignore[printf-string-formatting]
 
     if (issubclass(typ, list) and r is list.__repr__) or (
         issubclass(typ, tuple) and r is tuple.__repr__
